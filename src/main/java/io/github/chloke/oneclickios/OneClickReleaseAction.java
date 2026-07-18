@@ -12,14 +12,11 @@ import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.ui.popup.JBPopupFactory;
-import com.intellij.ui.SimpleListCellRenderer;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class OneClickReleaseAction extends AnAction implements DumbAware {
     @Override
@@ -103,31 +100,37 @@ public final class OneClickReleaseAction extends AnAction implements DumbAware {
             return;
         }
 
-        IosDevice selected;
         if (devices.size() == 1) {
-            selected = devices.getFirst();
-        } else {
-            AtomicBoolean chosen = new AtomicBoolean(false);
-            JBPopupFactory.getInstance()
-                    .createPopupChooserBuilder(devices)
-                    .setTitle("Install Flutter Release on iOS")
-                    .setRenderer(SimpleListCellRenderer.create("", IosDevice::displayName))
-                    .setNamerForFiltering(IosDevice::displayName)
-                    .setItemChosenCallback(device -> {
-                        chosen.set(true);
-                        ReleaseInstallRunner.run(project, flutterExecutable, projectRoot, device, state);
-                    })
-                    .setCancelCallback(() -> {
-                        if (!chosen.get()) {
-                            state.finish();
-                        }
-                        return true;
-                    })
-                    .createPopup()
-                    .showCenteredInCurrentWindow(project);
+            ReleaseInstallRunner.run(project, flutterExecutable, projectRoot, devices.getFirst(), state);
             return;
         }
 
-        ReleaseInstallRunner.run(project, flutterExecutable, projectRoot, selected, state);
+        String preferredDeviceId = state.preferredDeviceId();
+        if (preferredDeviceId != null) {
+            IosDevice preferredDevice = devices.stream()
+                    .filter(device -> preferredDeviceId.equals(device.id()))
+                    .findFirst()
+                    .orElse(null);
+            if (preferredDevice != null) {
+                ReleaseInstallRunner.run(project, flutterExecutable, projectRoot, preferredDevice, state);
+                return;
+            }
+        }
+
+        DeviceSelectionDialog dialog = new DeviceSelectionDialog(project, devices);
+        if (!dialog.showAndGet()) {
+            state.finish();
+            return;
+        }
+
+        IosDevice selectedDevice = dialog.selectedDevice();
+        if (selectedDevice == null) {
+            state.finish();
+            return;
+        }
+        if (dialog.shouldRememberSelection()) {
+            state.preferDevice(selectedDevice.id());
+        }
+        ReleaseInstallRunner.run(project, flutterExecutable, projectRoot, selectedDevice, state);
     }
 }

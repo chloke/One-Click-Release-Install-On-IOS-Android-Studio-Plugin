@@ -17,6 +17,7 @@ terminal process.
 - Adds an independent toolbar action without changing the normal Run configuration.
 - Detects supported physical iOS devices through `flutter devices --machine`.
 - Uses the only connected iOS device automatically or opens a chooser when several are connected.
+- Can remember a selected device per project and use it automatically whenever it is available.
 - Finds Flutter from `android/local.properties`, `FLUTTER_ROOT`, `PATH`, or common SDK locations.
 - Shows Flutter output in Android Studio's Run tool window.
 - Reports success and failure through IDE notifications.
