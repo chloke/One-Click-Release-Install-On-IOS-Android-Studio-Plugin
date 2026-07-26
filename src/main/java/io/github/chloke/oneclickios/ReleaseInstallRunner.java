@@ -11,6 +11,9 @@ import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,6 +64,14 @@ final class ReleaseInstallRunner {
                     .withActivateToolWindow(true)
                     .withFocusToolWindow(false)
                     .run();
+
+            ProgressManager.getInstance().run(new Task.Backgroundable(project, "Building iOS app...", false) {
+                @Override
+                public void run(@NotNull ProgressIndicator indicator) {
+                    indicator.setIndeterminate(true);
+                    handler.waitFor();
+                }
+            });
         } catch (ExecutionException exception) {
             state.finish();
             notify(project, "Could not start Flutter", exception.getMessage(), NotificationType.ERROR);
